@@ -1,0 +1,281 @@
+<?php
+
+use App\Http\Controllers\admin\AdminWorkingDaysController;
+use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\admin\AssetController;
+use App\Http\Controllers\Admin\AuthController as AdminAuthController;
+use App\Http\Controllers\admin\BloodGroupController;
+use App\Http\Controllers\admin\CourseController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\admin\DepartmentController;
+use App\Http\Controllers\admin\DesignationController;
+use App\Http\Controllers\admin\DesignationLeaveController;
+use App\Http\Controllers\admin\DesignationWorkingDayController;
+use App\Http\Controllers\admin\EmployeeController;
+use App\Http\Controllers\admin\EmployerEsicController;
+use App\Http\Controllers\admin\HolidayController;
+use App\Http\Controllers\admin\LeaveTypeController;
+use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\admin\PFController;
+use App\Http\Controllers\admin\QualificationAreaController;
+use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\admin\SalaryTypeController;
+use App\Http\Controllers\admin\SubDepartmentController;
+use App\Http\Controllers\admin\WorkingDayController;
+use App\Http\Controllers\admin\YearController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\LeaveController;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
+
+Route::get('/clear', function () {
+    Artisan::call('config:clear');
+    Artisan::call('cache:clear');
+    Artisan::call('route:clear');
+    Artisan::call('view:clear');
+    return "Cache cleared!";
+});
+
+Route::prefix('admin')->name('admin.')->group(function () {
+    Route::get('login', [AdminAuthController::class, 'showLoginForm'])->name('login');
+    Route::post('login', [AdminAuthController::class, 'loginSubmit'])->name('login.submit');
+    Route::get('forgot-password', [AdminAuthController::class, 'show_forgot_password_Form'])->name('forgot.password');
+    Route::post('forgot-password-check', [AdminAuthController::class, 'forgot_password_check'])->name('forgot.password.check');
+    Route::get('otp-verification/{id}', [AdminAuthController::class, 'otp_Verification_Form'])->name('otp.verification');
+    Route::post('verify-otp', [AdminAuthController::class, 'verifyOtp'])->name('verify.otp');
+    Route::post('resend-otp', [AdminAuthController::class, 'resendOtp'])->name('resend.otp');
+    Route::get('reset-password/{id}', [AdminAuthController::class, 'reset_password'])->name('reset.password');
+    Route::post('reset-password-submit', [AdminAuthController::class, 'reset_password_submit'])->name('reset.password.submit');
+
+    Route::get('/get-subdepartments/{id}', [DashboardController::class, 'get_subdepartments'])->name('get.subdepartments');
+    Route::get('/get-reporting-manager/{designation}', [DashboardController::class, 'get_reporting_manager'])->name('get.reporting.manager');
+
+    Route::middleware(['auth:admin'])->group(function () {
+
+        Route::get('logout', [AdminAuthController::class, 'logout'])->name('logout');
+        Route::get('profile', [AdminAuthController::class, 'profile'])->name('profile');
+        Route::post('profile-update', [AdminAuthController::class, 'profile_update'])->name('profile.update');
+
+        Route::middleware(['permission:View dashboard|Employee dashboard'])->group(function () {
+            Route::get('dashboard', [DashboardController::class, 'dashboard'])->name('dashboard');
+        });
+
+        Route::middleware(['permission:View Roles'])->group(function () {
+            Route::get('/roles', [RoleController::class, 'role_list'])->name('roles.list');
+        });
+
+        Route::middleware(['permission:Edit Roles'])->group(function () {
+            Route::get('/roles-edit/{id}', [RoleController::class, 'role_edit'])->name('roles.edit');
+            Route::post('/roles-update', [RoleController::class, 'role_update'])->name('roles.update');
+        });
+        Route::middleware(['permission:View Permissions'])->group(function () {
+            Route::get('/permissions', [PermissionController::class, 'permissions_list'])->name('permissions.list');
+        });
+        Route::middleware(['permission:Create Permissions'])->group(function () {
+            Route::get('/create-permissions', [PermissionController::class, 'permissions_create'])->name('permissions.create');
+            Route::post('/permissions-store', [PermissionController::class, 'permissions_store'])->name('permissions.store');
+        });
+        Route::middleware(['permission:Edit Permissions'])->group(function () {
+            Route::get('/permissions-edit/{id}', [PermissionController::class, 'permissions_edit'])->name('permissions.edit');
+            Route::post('/permissions-update', [PermissionController::class, 'permissions_update'])->name('permissions.update');
+        });
+
+        Route::prefix('designation-working-days')->middleware(['permission:View Working Days'])->group(function () {
+            Route::get('/', [DesignationWorkingDayController::class, 'index'])->name('designation-working-days.index');
+            Route::get('{id}/edit', [DesignationWorkingDayController::class, 'edit'])->name('designation-working-days.edit');
+            Route::post('{id}/update', [DesignationWorkingDayController::class, 'update'])->name('designation-working-days.update');
+            Route::get('{id}/get-days', [DesignationWorkingDayController::class, 'getDays'])->name('designation-working-days.get-days');
+            Route::post('save-modal', [DesignationWorkingDayController::class, 'saveFromModal'])->name('designation-working-days.save-modal');
+        });
+
+        Route::prefix('designation-leaves')->middleware(['permission:View Leaves'])->group(function () {
+            Route::get('/', [DesignationLeaveController::class, 'index'])->name('designation.leaves.index');
+            Route::get('{id}/get', [DesignationLeaveController::class, 'getData'])->name('designation.leaves.get');
+            Route::post('save', [DesignationLeaveController::class, 'store'])->name('designation.leaves.save');
+        });
+
+        Route::prefix('years')->middleware(['permission:View Years'])->group(function () {
+            Route::get('/', [YearController::class, 'index'])->name('years.index');
+            Route::post('store', [YearController::class, 'store'])->name('years.store');
+            Route::get('edit/{id}', [YearController::class, 'edit'])->name('years.edit');
+            Route::post('update/{id}', [YearController::class, 'update'])->name('years.update');
+            Route::post('delete/{id}', [YearController::class, 'delete'])->name('years.delete');
+        });
+
+        Route::middleware(['permission:View Salary Types'])->group(function () {
+            Route::get('salary-types', [SalaryTypeController::class, 'index'])->name('salary-types.index');
+            Route::post('salary-types', [SalaryTypeController::class, 'store'])->name('salary-types.store');
+            Route::put('salary-types/{salary_type}', [SalaryTypeController::class, 'update'])->name('salary-types.update');
+            Route::delete('salary-types/{salary_type}', [SalaryTypeController::class, 'destroy'])->name('salary-types.destroy');
+        });
+
+        Route::prefix('pf-setting')->middleware(['permission:View PF'])->group(function () {
+            Route::get('/', [PFController::class, 'index'])->name('pf.index');
+            Route::post('save', [PFController::class, 'store'])->name('pf.store');
+        });
+
+        Route::prefix('esic-settings')->middleware(['permission:View ESIC'])->group(function () {
+            Route::get('/', [EmployerEsicController::class, 'index'])->name('esic.index');
+            Route::post('save', [EmployerEsicController::class, 'store'])->name('esic.store');
+        });
+
+        Route::prefix('monthly_working-days')->middleware(['permission:View Monthly Working'])->group(function () {
+            Route::get('/', [AdminWorkingDaysController::class, 'create'])->name('monthly_working.create');
+            Route::post('/', [AdminWorkingDaysController::class, 'store'])->name('monthly_working.store');
+        });
+
+        Route::prefix('departments')->middleware(['permission:View Departments'])->group(function () {
+            Route::get('/', [DepartmentController::class, 'index'])->name('departments.index');
+            Route::post('/store', [DepartmentController::class, 'store'])->name('departments.store');
+            Route::post('/update/{id}', [DepartmentController::class, 'update'])->name('departments.update');
+            Route::get('/delete/{id}', [DepartmentController::class, 'delete'])->name('departments.delete');
+        });
+
+        Route::prefix('sub-departments')->middleware(['permission:View Departments'])->group(function () {
+            Route::get('/', [SubDepartmentController::class, 'index'])->name('sub-departments.index');
+            Route::post('/store', [SubDepartmentController::class, 'store'])->name('sub-departments.store');
+            Route::post('/update', [SubDepartmentController::class, 'update'])->name('sub-departments.update');
+            Route::get('/delete/{id}', [SubDepartmentController::class, 'delete'])->name('sub-departments.delete');
+        });
+
+        Route::prefix('designations')->middleware(['permission:View Designations'])->group(function () {
+            Route::get('/', [DesignationController::class, 'index'])->name('designations.index');
+            Route::post('/store', [DesignationController::class, 'store'])->name('designations.store');
+            Route::post('/update', [DesignationController::class, 'update'])->name('designations.update');
+            Route::get('/delete/{id}', [DesignationController::class, 'delete'])->name('designations.delete');
+        });
+
+        Route::prefix('blood-groups')->middleware(['permission:View Blood Groups'])->group(function () {
+            Route::get('/', [BloodGroupController::class, 'index'])->name('blood-groups.index');
+            Route::post('/store', [BloodGroupController::class, 'store'])->name('blood-groups.store');
+            Route::post('/update', [BloodGroupController::class, 'update'])->name('blood-groups.update');
+            Route::get('/delete/{id}', [BloodGroupController::class, 'delete'])->name('blood-groups.delete');
+        });
+
+        Route::prefix('holidays')->middleware(['permission:View Holidays'])->group(function () {
+            Route::get('/', [HolidayController::class, 'index'])->name('holidays.index');
+            Route::post('/store', [HolidayController::class, 'store'])->name('holidays.store');
+            Route::post('/update', [HolidayController::class, 'update'])->name('holidays.update');
+            Route::get('/delete/{id}', [HolidayController::class, 'delete'])->name('holidays.delete');
+        });
+
+        Route::prefix('leave-types')->middleware(['permission:View Leave Types'])->group(function () {
+            Route::get('/', [LeaveTypeController::class, 'index'])->name('leave-types.index');
+            Route::post('/store', [LeaveTypeController::class, 'store'])->name('leave-types.store');
+            Route::post('/update', [LeaveTypeController::class, 'update'])->name('leave-types.update');
+            Route::get('/delete/{id}', [LeaveTypeController::class, 'delete'])->name('leave-types.delete');
+        });
+
+        Route::prefix('qualification-areas')->middleware(['permission:View Qualification'])->group(function () {
+            Route::get('/', [QualificationAreaController::class, 'index'])->name('qualification.areas.index');
+            Route::post('/store', [QualificationAreaController::class, 'store'])->name('qualification.areas.store');
+            Route::post('/update', [QualificationAreaController::class, 'update'])->name('qualification.areas.update');
+            Route::post('/delete/{id}', [QualificationAreaController::class, 'delete'])->name('qualification.areas.delete');
+        });
+
+        Route::prefix('working-days')->middleware(['permission:Working Days Master'])->group(function () {
+            Route::get('/', [WorkingDayController::class, 'index'])->name('working.days.index');
+            Route::post('/store', [WorkingDayController::class, 'store'])->name('working.days.store');
+            Route::post('/update', [WorkingDayController::class, 'update'])->name('working.days.update');
+            Route::delete('/delete/{id}', [WorkingDayController::class, 'delete'])->name('working.days.delete');
+        });
+
+        Route::prefix('courses')->middleware(['permission:View Courses'])->group(function () {
+            Route::get('/', [CourseController::class, 'index'])->name('courses.index');
+            Route::post('/store', [CourseController::class, 'store'])->name('courses.store');
+            Route::post('/update', [CourseController::class, 'update'])->name('courses.update');
+            Route::delete('/delete/{id}', [CourseController::class, 'delete'])->name('courses.delete');
+        });
+
+        Route::prefix('employees')->middleware(['permission:View Employees'])->group(function () {
+            Route::get('/', [EmployeeController::class, 'index'])->name('employees.index');
+            Route::get('/create', [EmployeeController::class, 'create'])->name('employees.create');
+            Route::get('/edit/{id}', [EmployeeController::class, 'edit'])->name('employees.edit');
+            Route::post('/store', [EmployeeController::class, 'store'])->name('employees.store');
+            Route::post('/update', [EmployeeController::class, 'update'])->name('employees.update');
+            Route::post('/delete/{id}', [EmployeeController::class, 'delete'])->name('employees.delete');
+
+            Route::get('/salary', [EmployeeController::class, 'get_employees_salary'])->name('get.employees.salary');
+            Route::get('/create-salary/{id}', [EmployeeController::class, 'employees_create_salary'])->name('employees.create.salary');
+            Route::post('/store-salary', [EmployeeController::class, 'employees_store_salary'])->name('employees.store.salary');
+            Route::get('/edit-salary/{id}', [EmployeeController::class, 'employees_edit_salary'])->name('employees.edit.salary');
+            
+            Route::get('/view/{id}', [EmployeeController::class, 'view'])->name('employees.view');
+            Route::post('/profile-update', [EmployeeController::class, 'profile_update'])->name('employees.profile.update');
+            Route::post('/basic-update', [EmployeeController::class, 'basic_update'])->name('employee.basic.update');
+            Route::post('/personal-update', [EmployeeController::class, 'personal_update'])->name('employees.personal.update');
+            Route::post('/emergency-update', [EmployeeController::class, 'emergency_update'])->name('employee.emergency.update');
+            Route::post('/about-update', [EmployeeController::class, 'about_update'])->name('employee.about.update');
+            Route::post('/job-info-update', [EmployeeController::class, 'job_info_update'])->name('employee.job.info.update');
+            Route::post('/bank-update', [EmployeeController::class, 'bank_update'])->name('employee.bank.update');
+            Route::post('/pf-esi-update', [EmployeeController::class, 'pf_esi_update'])->name('employee.Pf.Esi.update');
+            Route::post('/address-update', [EmployeeController::class, 'address_update'])->name('employee.address.update');
+            Route::post('/education-update', [EmployeeController::class, 'education_update'])->name('employee.education.update');
+            Route::delete('/education-delete/{id}', [EmployeeController::class, 'education_delete'])->name('employee.education.delete');
+            Route::post('/experience-update', [EmployeeController::class, 'experience_update'])->name('employee.experience.update');
+            Route::delete('/experience-delete/{id}', [EmployeeController::class, 'experience_delete'])->name('employee.experience.delete');
+        });
+
+        Route::prefix('assets')->middleware(['permission:View Assets'])->group(function () {
+            Route::get('/', [AssetController::class, 'index'])->name('assets.index');
+            Route::post('/store', [AssetController::class, 'store'])->name('assets.store');
+            Route::post('/update', [AssetController::class, 'update'])->name('assets.update');
+            Route::delete('/delete/{id}', [AssetController::class, 'delete'])->name('assets.delete');
+        });
+
+        Route::prefix('assign-assets')->middleware(['permission:Assign Assets'])->group(function () {
+            Route::get('/', [AssetController::class, 'assign_assets_index'])->name('assign.assets.index');
+            Route::get('/get-assign-assets/{id}', [AssetController::class, 'get_assigned_assets'])->name('get.assigned.assets');
+            Route::post('/store', [AssetController::class, 'assign_assets_store'])->name('assign.assets.store');
+        });
+
+        Route::prefix('assets.history')->middleware(['permission:View Asset History'])->group(function () {
+            Route::get('/', [AssetController::class, 'assets_history'])->name('assets.history');
+            Route::get('/get-assign-assets/{id}', [AssetController::class, 'get_assigned_assets'])->name('get.assigned.assets');
+            Route::get('/ajax', [AssetController::class, 'assets_history_ajax'])->name('assets.history.ajax');
+            Route::get('/return/{id}', [AssetController::class, 'assets_return'])->name('assets.return');
+        });
+    });
+});
+
+Route::prefix('employee')->name('employee.')->group(function () {
+    Route::middleware(['auth:admin'])->group(function () {
+
+        Route::post('/leave-store', [LeaveController::class, 'leave_store'])->name('leave.store');
+        Route::get('/get-leave-details', [LeaveController::class, 'get_Leave_Details'])->name('leave.details');
+        Route::post('/leave/mark-read', [LeaveController::class, 'leave_mark_Read'])->name('leave.mark.read');
+
+        Route::post('/attendance/punch', [AttendanceController::class, 'attendance_punch'])->name('attendance.punch');
+
+        Route::prefix('profile')->middleware(['permission:Employee Profile'])->group(function () {
+            Route::get('/', [EmployeeController::class, 'employee_profile'])->name('profile');
+        });
+
+        Route::prefix('leaves')->middleware(['permission:Employee My Leaves'])->group(function () {
+            Route::get('/', [LeaveController::class, 'employee_my_leaves'])->name('my.leaves');
+        });
+
+        Route::prefix('leave-requests')->middleware(['permission:Employee Leaves Request'])->group(function () {
+            Route::get('/', [LeaveController::class, 'leave_request'])->name('leave.requests');
+            Route::post('/approve', [LeaveController::class, 'leave_request_approve'])->name('leave.request.approve');
+            Route::post('/reject', [LeaveController::class, 'leave_request_reject'])->name('leave.request.reject');
+            Route::get('get-types/{user}', [LeaveController::class, 'get_Leave_Types']);
+            Route::post('/admin-store', [LeaveController::class, 'admin_leave_store'])->name('admin.leave.store');
+        });
+
+        Route::prefix('attendance')->middleware(['permission:My Attendance'])->group(function () {
+            Route::get('/', [AttendanceController::class, 'employee_my_attendance'])->name('my.attendance');
+        });
+
+        Route::prefix('attendance-request')->middleware(['permission:Attendance Request'])->group(function () {
+            Route::get('/', [AttendanceController::class, 'attendance_request'])->name('attendance.request');
+            Route::post('/attendance-approve', [AttendanceController::class, 'attendance_approve'])->name('attendance.request.approve');
+            Route::post('/attendance-reject', [AttendanceController::class, 'attendance_reject'])->name('attendance.request.reject');
+        });
+    });
+});
+
+Route::get('/', [AdminAuthController::class, 'showLoginForm']);
+
+Route::get('/privacy-policy', [HomeController::class, 'privacy_policy'])->name('front.privacy.policy');
+Route::get('/terms-conditions', [HomeController::class, 'terms_conditions'])->name('front.terms.conditions');
