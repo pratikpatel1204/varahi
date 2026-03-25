@@ -13,8 +13,10 @@ use App\Http\Controllers\admin\DesignationLeaveController;
 use App\Http\Controllers\admin\DesignationWorkingDayController;
 use App\Http\Controllers\admin\EmployeeController;
 use App\Http\Controllers\admin\EmployerEsicController;
+use App\Http\Controllers\Admin\ExpenseReimbursementController;
 use App\Http\Controllers\admin\HolidayController;
 use App\Http\Controllers\admin\LeaveTypeController;
+use App\Http\Controllers\admin\LoanManagementController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\admin\PFController;
 use App\Http\Controllers\admin\QualificationAreaController;
@@ -235,6 +237,25 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/ajax', [AssetController::class, 'assets_history_ajax'])->name('assets.history.ajax');
             Route::get('/return/{id}', [AssetController::class, 'assets_return'])->name('assets.return');
         });
+        
+        Route::prefix('loan')->middleware(['permission:Loan Management'])->group(function () {
+            Route::get('/create', [LoanManagementController::class, 'loans_create'])->name('loans.create');
+            Route::post('/store', [LoanManagementController::class, 'loans_store'])->name('loans.store');                 
+            Route::get('/request', [LoanManagementController::class, 'loans_request'])->name('loan.request');                       
+            Route::post('/update-status', [LoanManagementController::class, 'loans_update_status'])->name('loans.update.status');                       
+        });
+        
+        Route::prefix('expense-reimbursement')->middleware(['permission:Expense Reimbursement'])->group(function () {
+            Route::get('/list', [ExpenseReimbursementController::class, 'expense_reimbursement_list'])->name('expense.reimbursement.list');            
+            Route::get('/create', [ExpenseReimbursementController::class, 'expense_reimbursement_create'])->name('expense.reimbursement.create');            
+            Route::post('/store', [ExpenseReimbursementController::class, 'expense_reimbursement_store'])->name('expense.reimbursement.store');            
+            Route::post('/update-status', [ExpenseReimbursementController::class, 'expense_reimbursement_update_status'])->name('expense.reimbursement.update.status');            
+        });
+        
+        Route::prefix('Salary')->middleware(['permission:Process Salary'])->group(function () {
+            Route::get('/list', [ExpenseReimbursementController::class, 'expense_reimbursement_list'])->name('expense.reimbursement.list');                            
+        });
+
     });
 });
 
